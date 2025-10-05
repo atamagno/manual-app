@@ -6,8 +6,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - .:/usr/src/app
-      - /usr/src/app/node_modules
+      - ./src:/usr/src/app/src
     environment:
       - NODE_ENV=development
       - PORT=3000
