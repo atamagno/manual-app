@@ -9,7 +9,6 @@ const buildOptions: BuildOptions = {
   bundle: true,
   platform: "node",
   target: "node20",
-  format: "esm",
   outfile: "dist/index.js",
   minify: isProd,
   sourcemap: !isProd,
