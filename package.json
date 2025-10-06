@@ -6,7 +6,9 @@
   "description": "app to practice adding modules manually",
   "author": "Agustin Tamagno",
   "scripts": {
-    "build": "tsc",
+    "build": "node build.mjs",
+    "build:dev": "esbuild src/index.ts --bundle --platform=node --target=node20 --sourcemap --outfile=dist/index.js --define:process.env.NODE_ENV='\"development\"'",
+    "build:prod": "esbuild src/index.ts --bundle --platform=node --target=node20 --minify --outfile=dist/index.js --define:process.env.NODE_ENV='\"production\"'",
     "start": "node dist/index.js",
     "start:ts": "ts-node --transpile-only src/index.ts",
     "dev": "ts-node-dev --transpile-only --respawn src/index.ts",
@@ -25,6 +27,7 @@
     "@types/supertest": "^6.0.3",
     "@typescript-eslint/eslint-plugin": "^8.45.0",
     "@typescript-eslint/parser": "^8.45.0",
+    "esbuild": "^0.25.10",
     "eslint": "^9.37.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
