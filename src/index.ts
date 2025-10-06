@@ -1,19 +1,32 @@
-import express from "express";
+import Fastify from "fastify";
 import dotenv from "dotenv";
 import healthRoutes from "./routes/health";
 import { logger } from "./middleware/logger";
 
 dotenv.config();
 
-const app = express();
-const port = process.env.PORT || 3000;
+const port = parseInt(process.env.PORT || "3000");
+const logLevel = process.env.LOG_LEVEL || "info";
 
-app.use(express.json());
-app.use(logger);
-
-// Routes
-app.use("/api/health", healthRoutes);
-
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+const fastify = Fastify({
+  logger: { level: logLevel },
 });
+
+// Start the server
+const start = async () => {
+  try {
+    // Register middleware
+    await fastify.register(logger);
+
+    // Register routes
+    await fastify.register(healthRoutes, { prefix: "/api/health" });
+
+    await fastify.listen({ port, host: "0.0.0.0" });
+    console.log(`Server running at http://localhost:${port}`);
+  } catch (err) {
+    fastify.log.error(err);
+    process.exit(1);
+  }
+};
+
+start();

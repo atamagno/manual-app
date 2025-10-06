@@ -1,6 +1,11 @@
-import { Request, Response, NextFunction } from "express";
+import { FastifyInstance, FastifyRequest } from "fastify";
+import fp from "fastify-plugin";
 
-export const logger = (req: Request, res: Response, next: NextFunction) => {
-  console.log(`${req.method} ${req.path}`);
-  next();
-};
+async function logger(fastify: FastifyInstance) {
+  fastify.addHook("onRequest", async (request: FastifyRequest) => {
+    console.log(`${request.method} ${request.url}`);
+  });
+}
+
+export { logger };
+export default fp(logger);
