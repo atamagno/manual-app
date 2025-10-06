@@ -1,5 +1,8 @@
-import { Request, Response } from "express";
+import { FastifyRequest, FastifyReply } from "fastify";
 
-export const getHealth = (req: Request, res: Response) => {
-  res.json({ status: "OK", uptime: process.uptime() });
+export const getHealth = async (
+  request: FastifyRequest,
+  reply: FastifyReply
+) => {
+  return reply.send({ status: "OK", uptime: process.uptime() });
 };

@@ -22,10 +22,8 @@
     "test": "jest"
   },
   "devDependencies": {
-    "@types/express": "^5.0.3",
     "@types/jest": "^30.0.0",
-    "@types/node": "^24.6.2",
-    "@types/supertest": "^6.0.3",
+    "@types/node": "^24.7.0",
     "@typescript-eslint/eslint-plugin": "^8.45.0",
     "@typescript-eslint/parser": "^8.45.0",
     "esbuild": "^0.25.10",
@@ -38,7 +36,6 @@
     "jiti": "^2.6.1",
     "lint-staged": "^16.2.3",
     "prettier": "^3.6.2",
-    "supertest": "^7.1.4",
     "ts-jest": "^29.4.4",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
@@ -53,6 +50,7 @@
   },
   "dependencies": {
     "dotenv": "^17.2.3",
-    "express": "^5.1.0"
+    "fastify": "^5.6.1",
+    "fastify-plugin": "^5.1.0"
   }
 }
