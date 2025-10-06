@@ -13,6 +13,7 @@
     "start:dev": "yarn run build:dev && yarn run start",
     "start:prod": "yarn run build:prod && yarn run start",
     "start:watch": "tsx watch src/index.ts",
+    "debug": "yarn run build:dev && node --enable-source-maps --inspect-brk dist/index.js",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

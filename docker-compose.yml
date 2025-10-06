@@ -1,6 +1,7 @@
 services:
   app:
     build: .
+    image: manual-app-image
     container_name: manual-app
     restart: unless-stopped
     ports:
