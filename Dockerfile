@@ -2,13 +2,19 @@ FROM node:20-alpine
 
 WORKDIR /usr/src/app
 
-COPY package*.json ./
+# Copy package files
+COPY package.json yarn.lock ./
 
-RUN yarn install --frozen-lockfile
+# Install only production dependencies
+RUN yarn install --frozen-lockfile --production --ignore-scripts && yarn cache clean
 
-COPY . .
+# Copy only necessary files for building
+COPY tsconfig.json ./
+COPY esbuild.config.ts ./
+COPY src/ ./src/
 
-RUN yarn build
+# Build the application
+RUN yarn build:prod
 
 EXPOSE 3000
 

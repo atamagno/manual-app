@@ -13,6 +13,7 @@
     "start:dev": "yarn run build:dev && yarn run start",
     "start:prod": "yarn run build:prod && yarn run start",
     "start:watch": "tsx watch src/index.ts",
+    "debug": "yarn run build:dev && node --enable-source-maps --inspect-brk dist/index.js",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -27,7 +28,6 @@
     "@types/supertest": "^6.0.3",
     "@typescript-eslint/eslint-plugin": "^8.45.0",
     "@typescript-eslint/parser": "^8.45.0",
-    "esbuild": "^0.25.10",
     "eslint": "^9.37.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
@@ -52,6 +52,7 @@
   },
   "dependencies": {
     "dotenv": "^17.2.3",
+    "esbuild": "^0.25.10",
     "express": "^5.1.0"
   }
 }
