@@ -8,10 +8,17 @@ export PERMISSIONS_BOUNDARY="none"
 ######## Get script parameters separated by ; and set them as global variables #########
 OLD_IFS=$IFS # backup original separator (new line usually) so we can revert it as other code might rely on it
 export IFS=";"
+ALLOWED_KEYS=("AWS_REGION" "ACCOUNT_ID" "ENVIRONMENT_NAME" "IMAGE_TAG")
 for keyVal in $GLOBAL_OVERRIDES; do
   KEY=${keyVal%=*}
   VALUE=${keyVal#*=}
-  export ${KEY}=${VALUE}
+  # Check if KEY is in the whitelist
+  for allowed in "${ALLOWED_KEYS[@]}"; do
+    if [[ "$KEY" == "$allowed" ]]; then
+      export ${KEY}="${VALUE}"
+      break
+    fi
+  done
 done
 export IFS=$OLD_IFS # put separator back to normal
 
@@ -23,7 +30,7 @@ fi
 
 if [ -z "${ACCOUNT_ID}" ]
 then
-  export ACCOUNT_ID=`aws sts get-caller-identity | jq -r '.Account'`
+  export ACCOUNT_ID=$(aws sts get-caller-identity | jq -r '.Account')
 fi
 
 # Configuration
