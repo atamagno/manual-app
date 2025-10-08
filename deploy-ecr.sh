@@ -33,6 +33,18 @@ then
   export ACCOUNT_ID=$(aws sts get-caller-identity | jq -r '.Account')
 fi
 
+export GIT_HASH=`git rev-parse --short HEAD`
+if [ -z "${GIT_HASH}" ]; then
+  export GIT_HASH="unknown"
+  echo "Using default git hash of unknown"
+fi
+
+export GIT_BRANCH=`git symbolic-ref --short HEAD`
+if [ -z "${GIT_BRANCH}" ]; then
+  export GIT_BRANCH="hash"
+  echo "Using default git branch of hash"
+fi
+
 # Configuration
 APP_NAME="manual-app"
 ENVIRONMENT_NAME="${ENVIRONMENT_NAME:-dev}"
@@ -45,11 +57,21 @@ ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 CONTAINER_PORT=3000
 IMAGE_TAG="${IMAGE_TAG:-latest}"
 
-# Create ECR repo if it doesn’t exist
-if ! aws ecr describe-repositories --repository-names $ECR_REPOSITORY_NAME --region $AWS_REGION >/dev/null 2>&1; then
-  echo "Creating ECR repository: $ECR_REPOSITORY_NAME"
-  aws ecr create-repository --repository-name $ECR_REPOSITORY_NAME --region $AWS_REGION
-fi
+ECR_CFN_TEMPLATE="cfn/ecr.yml"
+ECR_STACK="${PREFIX}ecr-repository-stack"
+CFN_TAGS="Application=${APP_NAME} Environment=${ENVIRONMENT_NAME}"
+
+aws cloudformation deploy \
+  --stack-name $ECR_STACK \
+  --template-file $ECR_CFN_TEMPLATE \
+  --parameter-overrides \
+      pRepositoryName=$ECR_REPOSITORY_NAME \
+      pGitBranch=$GIT_BRANCH \
+      pGitHash=$GIT_HASH \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --no-fail-on-empty-changeset \
+  --tags $CFN_TAGS \
+  --region $AWS_REGION
 
 echo "Logging in to ECR..."
 aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
