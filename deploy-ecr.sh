@@ -50,16 +50,15 @@ APP_NAME="manual-app"
 ENVIRONMENT_NAME="${ENVIRONMENT_NAME:-dev}"
 PREFIX="${APP_NAME}-${ENVIRONMENT_NAME}-"
 POSTFIX="-${ACCOUNT_ID}-${AWS_REGION}"
-ECS_CLUSTER_NAME="${PREFIX}cluster${POSTFIX}"
-ECS_SERVICE_NAME="${PREFIX}service${POSTFIX}"
 ECR_REPOSITORY_NAME="${PREFIX}repository${POSTFIX}"
 ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-CONTAINER_PORT=3000
 IMAGE_TAG="${IMAGE_TAG:-latest}"
 
 ECR_CFN_TEMPLATE="cfn/ecr.yml"
 ECR_STACK="${PREFIX}ecr-repository-stack"
 CFN_TAGS="Application=${APP_NAME} Environment=${ENVIRONMENT_NAME}"
+
+echo "Deploying ECR Repository"
 
 aws cloudformation deploy \
   --stack-name $ECR_STACK \

@@ -9,6 +9,15 @@ Parameters:
     Type: String
     Default: dev
     Description: The name of the specific stack deployment e.g. 'dev'
+  pImageUri:
+    Type: String
+    Description: The ECR Image URI
+  pVpcId:
+    Type: String
+    Description: VPC ID for security group
+  pSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: List of the subnets in the VPC
   pGitHash:
     Type: String
   pGitBranch:
@@ -37,6 +46,7 @@ Resources:
       Path: /
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+        - arn:aws:iam::aws:policy/service-role/AWSAppSyncPushToCloudWatchLogs
       MaxSessionDuration: 3600
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
@@ -56,18 +66,72 @@ Resources:
         ExecuteCommandConfiguration:
           Logging: DEFAULT
 
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub ${pAppName}-${pEnvironmentName}-TaskDefinition
+      Cpu: "256"
+      Memory: "512"
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: !GetAtt IAMRoleEcsTaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt IAMRoleEcsTaskRole.Arn
+      ContainerDefinitions:
+        - Name: !Sub ${pAppName}-${pEnvironmentName}-container
+          Image: !Sub ${pImageUri}
+          PortMappings:
+            - ContainerPort: 80
+              HostPort: 80
+              Protocol: tcp
+          Environment:
+            - Name: NODE_ENV
+              Value: !Sub ${pEnvironmentName}
+            - Name: PORT
+              Value: "80"
+          Essential: true
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-create-group: true
+              awslogs-group: !Sub /ecs/${pAppName}-${pEnvironmentName}
+              awslogs-region: !Ref "AWS::Region"
+              awslogs-stream-prefix: ecs
+
+  ECSClusterSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group for ECS Cluster
+      GroupName: !Sub ${pAppName}-${pEnvironmentName}-sg
+      VpcId: !Ref pVpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+  ECSService:
+    Type: AWS::ECS::Service
+    DependsOn: ECSClusterSecurityGroup
+    Properties:
+      ServiceName: !Sub ${pAppName}-${pEnvironmentName}-EcsService
+      Cluster: !Ref ECSCluster
+      DesiredCount: 1
+      LaunchType: FARGATE
+      TaskDefinition: !Ref TaskDefinition
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            - !Ref ECSClusterSecurityGroup
+          Subnets: !Ref pSubnetIds
+
 Outputs:
   EcsTaskRoleArn:
     Description: ECS Task Role ARN
     Value: !GetAtt IAMRoleEcsTaskRole.Arn
     Export:
       Name: !Sub "${AWS::StackName}-EcsTaskRoleArn"
-
-  EcsTaskExecutionRoleArn:
-    Description: ECS Task Execution Role ARN
-    Value: !GetAtt IAMRoleEcsTaskExecutionRole.Arn
-    Export:
-      Name: !Sub "${AWS::StackName}-EcsTaskExecutionRoleArn"
 
   EcsClusterName:
     Description: ECS Cluster Name
@@ -80,6 +144,36 @@ Outputs:
     Value: !GetAtt ECSCluster.Arn
     Export:
       Name: !Sub "${AWS::StackName}-EcsClusterArn"
+
+  EcsTaskExecutionRoleArn:
+    Description: ECS Task Execution Role ARN
+    Value: !GetAtt IAMRoleEcsTaskExecutionRole.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-EcsTaskExecutionRoleArn"
+
+  EcsTaskDefinitionArn:
+    Description: ECS Task Definition ARN
+    Value: !GetAtt TaskDefinition.TaskDefinitionArn
+    Export:
+      Name: !Sub "${AWS::StackName}-EcsTaskDefinitionArn"
+
+  ECSClusterSecurityGroupId:
+    Description: ECS Cluster Security Group ID
+    Value: !GetAtt ECSClusterSecurityGroup.GroupId
+    Export:
+      Name: !Sub "${AWS::StackName}-EcsClusterSecurityGroupId"
+
+  EcsServiceName:
+    Description: ECS Service Name
+    Value: !GetAtt ECSService.Name
+    Export:
+      Name: !Sub "${AWS::StackName}-EcsServiceName"
+
+  EcsServiceArn:
+    Description: ECS Service ARN
+    Value: !GetAtt ECSService.ServiceArn
+    Export:
+      Name: !Sub "${AWS::StackName}-EcsServiceArn"
 
   CodeRef:
     Value: !Join ["", [!Ref pGitBranch, ".", !Ref pGitHash]]

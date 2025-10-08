@@ -50,10 +50,21 @@ APP_NAME="manual-app"
 ENVIRONMENT_NAME="${ENVIRONMENT_NAME:-dev}"
 PREFIX="${APP_NAME}-${ENVIRONMENT_NAME}-"
 POSTFIX="-${ACCOUNT_ID}-${AWS_REGION}"
+ECR_REPOSITORY_NAME="${PREFIX}repository${POSTFIX}"
+ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+IMAGE_TAG="${IMAGE_TAG:-latest}"
+IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY_NAME:$IMAGE_TAG"
 
 ECS_CFN_TEMPLATE="cfn/ecs.yml"
 ECS_STACK="${PREFIX}ecs-stack"
 CFN_TAGS="Application=${APP_NAME} Environment=${ENVIRONMENT_NAME}"
+
+echo "Deploying ECS stack $ECS_STACK to region $AWS_REGION with image $IMAGE_URI"
+
+VPC_ID=$(aws ec2 describe-vpcs --filters "Name=is-default,Values=true" --region $AWS_REGION --query 'Vpcs[0].VpcId' --output text)
+SUBNET_IDS=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" --region $AWS_REGION --query 'Subnets[*].SubnetId' --output text | tr '\t' ',')
+
+echo "Using VPC $VPC_ID and subnets $SUBNET_IDS"
 
 aws cloudformation deploy \
   --stack-name $ECS_STACK \
@@ -61,6 +72,9 @@ aws cloudformation deploy \
   --parameter-overrides \
       pAppName=$APP_NAME \
       pEnvironmentName=$ENVIRONMENT_NAME \
+      pImageUri=$IMAGE_URI \
+      pVpcId=$VPC_ID \
+      pSubnetIds=$SUBNET_IDS \
       pGitBranch=$GIT_BRANCH \
       pGitHash=$GIT_HASH \
   --capabilities CAPABILITY_NAMED_IAM \
