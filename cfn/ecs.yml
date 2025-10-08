@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "ECS Cluster for Manual App"
+
+Parameters:
+  pAppName:
+    Type: String
+    Description: Application Name deployed in this stack
+  pEnvironmentName:
+    Type: String
+    Default: dev
+    Description: The name of the specific stack deployment e.g. 'dev'
+  pGitHash:
+    Type: String
+  pGitBranch:
+    Type: String
+
+Resources:
+  IAMRoleEcsTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${pAppName}-${pEnvironmentName}-EcsTaskRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSAppSyncPushToCloudWatchLogs
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+
+  IAMRoleEcsTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${pAppName}-${pEnvironmentName}-EcsTaskExecutionRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub ${pAppName}-${pEnvironmentName}-EcsCluster
+      CapacityProviders:
+        - FARGATE
+      Configuration:
+        ExecuteCommandConfiguration:
+          Logging: DEFAULT
+
+Outputs:
+  EcsTaskRoleArn:
+    Description: ECS Task Role ARN
+    Value: !GetAtt IAMRoleEcsTaskRole.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-EcsTaskRoleArn"
+
+  EcsTaskExecutionRoleArn:
+    Description: ECS Task Execution Role ARN
+    Value: !GetAtt IAMRoleEcsTaskExecutionRole.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-EcsTaskExecutionRoleArn"
+
+  EcsClusterName:
+    Description: ECS Cluster Name
+    Value: !Ref ECSCluster
+    Export:
+      Name: !Sub "${AWS::StackName}-EcsClusterName"
+
+  EcsClusterArn:
+    Description: ECS Cluster ARN
+    Value: !GetAtt ECSCluster.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-EcsClusterArn"
+
+  CodeRef:
+    Value: !Join ["", [!Ref pGitBranch, ".", !Ref pGitHash]]
+    Description: Code Reference
+    Export:
+      Name: !Sub ${AWS::StackName}-CodeRef
