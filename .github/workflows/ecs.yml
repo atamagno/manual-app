@@ -1,4 +1,4 @@
-name: Deploy ECR
+name: Deploy ECS
 
 on:
   workflow_dispatch:
@@ -18,7 +18,7 @@ on:
 
 jobs:
   deploy:
-    name: "Deploy ECR repository"
+    name: "Deploy ECS"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository code
@@ -31,11 +31,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ github.event.inputs.region }}
 
-      - name: Running deploy script for ECR
-        id: deploy-ecr
+      - name: Running deploy script for ECS
+        id: deploy-ecs
         working-directory: ./
         env:
           AWS_REGION: ${{ github.event.inputs.region }}
         run: |
-          chmod u+x deploy-ecr.sh
-          ./deploy-ecr.sh
+          chmod u+x deploy-ecs.sh
+          ./deploy-ecs.sh

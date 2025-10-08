@@ -45,6 +45,23 @@ if [ -z "${GIT_BRANCH}" ]; then
   echo "Using default git branch of hash"
 fi
 
+getStackOutputs () {
+  stackOutputs=$(aws cloudformation describe-stacks --region ${AWS_REGION} --stack-name ${1} | jq -r '.Stacks[0].Outputs | map({key:.OutputKey,value:.OutputValue})| .[] | "Stack_" + .key + "=" + .value' | tr -d '\r')
+  if [[ -z "$stackOutputs" ]]; then
+    if [ "${2}" = "noexit" ]; then
+      return
+    fi
+      echo "Failed to retrieve stack outputs from stack (${1})"
+      echo "Aborting pipeline"
+      exit 255
+  else
+    echo "Successfully retrieved values from ${1}"
+    for key in ${stackOutputs}; do
+      export ${key}
+    done
+  fi
+}
+
 # Configuration
 APP_NAME="manual-app"
 ENVIRONMENT_NAME="${ENVIRONMENT_NAME:-dev}"
@@ -53,18 +70,24 @@ POSTFIX="-${ACCOUNT_ID}-${AWS_REGION}"
 ECR_REPOSITORY_NAME="${PREFIX}repository${POSTFIX}"
 ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
+IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY_NAME:$IMAGE_TAG"
+VPC_CIDR="${VPC_CIDR:-10.0.0.0/16}"
 
-ECR_CFN_TEMPLATE="cfn/ecr.yml"
-ECR_STACK="${PREFIX}ecr-repository-stack"
+ECS_CFN_TEMPLATE="cfn/ecs.yml"
+ECS_STACK="${PREFIX}ecs-stack"
+VPC_CFN_TEMPLATE="cfn/vpc.yml"
+VPC_STACK="${PREFIX}vpc-stack"
 CFN_TAGS="Application=${APP_NAME} Environment=${ENVIRONMENT_NAME}"
 
-echo "Deploying ECR Repository"
+echo "Deploying VPC stack $VPC_STACK"
 
 aws cloudformation deploy \
-  --stack-name $ECR_STACK \
-  --template-file $ECR_CFN_TEMPLATE \
+  --stack-name $VPC_STACK \
+  --template-file $VPC_CFN_TEMPLATE \
   --parameter-overrides \
-      pRepositoryName=$ECR_REPOSITORY_NAME \
+      pAppName=$APP_NAME \
+      pEnvironmentName=$ENVIRONMENT_NAME \
+      pVpcCidr=$VPC_CIDR \
       pGitBranch=$GIT_BRANCH \
       pGitHash=$GIT_HASH \
   --capabilities CAPABILITY_NAMED_IAM \
@@ -72,20 +95,30 @@ aws cloudformation deploy \
   --tags $CFN_TAGS \
   --region $AWS_REGION
 
-echo "Logging in to ECR..."
-aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+getStackOutputs $VPC_STACK
 
-echo "Building Docker image..."
-docker build --provenance false -t $ECR_REPOSITORY_NAME:$IMAGE_TAG .
+VPC_ID=$Stack_VPC
+SUBNET_IDS=$Stack_PublicSubnets
 
-echo "Tagging image with $IMAGE_TAG..."
-docker tag $ECR_REPOSITORY_NAME:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY_NAME:$IMAGE_TAG
+echo "Using VPC $VPC_ID and subnets $SUBNET_IDS"
 
-echo "Pushing image to ECR..."
-docker push $ECR_REGISTRY/$ECR_REPOSITORY_NAME:$IMAGE_TAG
+echo "Deploying ECS stack $ECS_STACK"
 
-echo "Image pushed to ECR successfully!"
-echo "Image: $ECR_REGISTRY/$ECR_REPOSITORY_NAME:$IMAGE_TAG"
+aws cloudformation deploy \
+  --stack-name $ECS_STACK \
+  --template-file $ECS_CFN_TEMPLATE \
+  --parameter-overrides \
+      pAppName=$APP_NAME \
+      pEnvironmentName=$ENVIRONMENT_NAME \
+      pImageUri=$IMAGE_URI \
+      pVpcId=$VPC_ID \
+      pSubnetIds=$SUBNET_IDS \
+      pGitBranch=$GIT_BRANCH \
+      pGitHash=$GIT_HASH \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --no-fail-on-empty-changeset \
+  --tags $CFN_TAGS \
+  --region $AWS_REGION
 
 END_TIME=$(date -R)
 

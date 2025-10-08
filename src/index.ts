@@ -19,6 +19,7 @@ const start = async () => {
     await fastify.register(logger);
 
     // Register routes
+    await fastify.register(healthRoutes, { prefix: "/" });
     await fastify.register(healthRoutes, { prefix: "/api/health" });
 
     await fastify.listen({ port, host: "0.0.0.0" });

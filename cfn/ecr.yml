@@ -1,0 +1,46 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "ECR Repository for Manual App"
+
+Parameters:
+  pRepositoryName:
+    Type: String
+  pGitHash:
+    Type: String
+  pGitBranch:
+    Type: String
+
+Resources:
+  ECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      ImageScanningConfiguration:
+        ScanOnPush: false
+      RepositoryName: !Sub "${pRepositoryName}"
+      EncryptionConfiguration:
+        EncryptionType: "AES256"
+      ImageTagMutability: "MUTABLE"
+
+Outputs:
+  ECRRepositoryURI:
+    Description: ECR Repository URI
+    Value: !GetAtt ECRRepository.RepositoryUri
+    Export:
+      Name: !Sub "${AWS::StackName}-ECRRepositoryURI"
+
+  ECRRepositoryName:
+    Description: ECR Repository Name
+    Value: !Ref ECRRepository
+    Export:
+      Name: !Sub "${AWS::StackName}-ECRRepositoryName"
+
+  ECRRepositoryArn:
+    Description: ECR Repository ARN
+    Value: !GetAtt ECRRepository.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-ECRRepositoryArn"
+
+  CodeRef:
+    Value: !Join ["", [!Ref pGitBranch, ".", !Ref pGitHash]]
+    Description: Code Reference
+    Export:
+      Name: !Sub ${AWS::StackName}-CodeRef
