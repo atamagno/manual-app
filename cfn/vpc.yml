@@ -217,11 +217,11 @@ Outputs:
     Export:
       Name: !Sub "${AWS::StackName}-VPC"
 
-  ElasticIPAdress:
+  ElasticIPAddress:
     Description: The Elastic IP address for the NAT Gateway
     Value: !GetAtt ElasticIP.PublicIp
     Export:
-      Name: !Sub "${AWS::StackName}-ElasticIPAdress"
+      Name: !Sub "${AWS::StackName}-ElasticIPAddress"
 
   NatGatewayId:
     Description: A reference to the NAT Gateway
