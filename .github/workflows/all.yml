@@ -1,4 +1,4 @@
-name: Deploy ECR
+name: Deploy All
 
 on:
   workflow_dispatch:
@@ -17,25 +17,15 @@ on:
         default: ap-southeast-2
 
 jobs:
-  deploy:
-    name: "Deploy ECR repository"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository code
-        uses: actions/checkout@v4
+  deploy-ecr:
+    uses: ./.github/workflows/ecr.yml
+    with:
+      environment: ${{ github.event.inputs.environment }}
+      region: ${{ github.event.inputs.region }}
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ github.event.inputs.region }}
-
-      - name: Running deploy script for ECR
-        id: deploy-ecr
-        working-directory: ./
-        env:
-          AWS_REGION: ${{ github.event.inputs.region }}
-        run: |
-          chmod u+x deploy-ecr.sh
-          ./deploy-ecr.sh
+  deploy-ecs:
+    uses: ./.github/workflows/ecs.yml
+    needs: deploy-ecr
+    with:
+      environment: ${{ github.event.inputs.environment }}
+      region: ${{ github.event.inputs.region }}
