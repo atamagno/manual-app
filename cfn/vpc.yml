@@ -13,6 +13,10 @@ Parameters:
     Type: String
     Default: "10.0.0.0/16"
     Description: CIDR block for the VPC
+  pGitHash:
+    Type: String
+  pGitBranch:
+    Type: String
 
 Resources:
   VPC:
@@ -41,6 +45,28 @@ Resources:
     Properties:
       InternetGatewayId: !Ref InternetGateway
       VpcId: !Ref VPC
+
+  ElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      PublicIpv4Pool: amazon
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${pAppName}-${pEnvironmentName}-eip"
+        - Key: Environment
+          Value: !Ref pEnvironmentName
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt ElasticIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub "${pAppName}-${pEnvironmentName}-nat-gateway"
+        - Key: Environment
+          Value: !Ref pEnvironmentName
 
   PublicSubnet1:
     Type: AWS::EC2::Subnet
@@ -170,12 +196,38 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
 
+  PrivateSubnet1Route:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+
+  PrivateSubnet2Route:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+
 Outputs:
   VPC:
     Description: A reference to the created VPC
     Value: !Ref VPC
     Export:
       Name: !Sub "${AWS::StackName}-VPC"
+
+  ElasticIPAddress:
+    Description: The Elastic IP address for the NAT Gateway
+    Value: !GetAtt ElasticIP.PublicIp
+    Export:
+      Name: !Sub "${AWS::StackName}-ElasticIPAddress"
+
+  NatGatewayId:
+    Description: A reference to the NAT Gateway
+    Value: !Ref NatGateway
+    Export:
+      Name: !Sub "${AWS::StackName}-NatGatewayId"
 
   PublicSubnets:
     Description: A list of the public subnets
@@ -212,3 +264,9 @@ Outputs:
     Value: !Ref PrivateSubnet2
     Export:
       Name: !Sub "${AWS::StackName}-PrivateSubnet2"
+
+  CodeRef:
+    Value: !Join ["", [!Ref pGitBranch, ".", !Ref pGitHash]]
+    Description: Code Reference
+    Export:
+      Name: !Sub ${AWS::StackName}-CodeRef

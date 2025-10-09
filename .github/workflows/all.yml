@@ -19,6 +19,7 @@ on:
 jobs:
   deploy-ecr:
     uses: ./.github/workflows/ecr.yml
+    secrets: inherit
     with:
       environment: ${{ github.event.inputs.environment }}
       region: ${{ github.event.inputs.region }}
@@ -26,6 +27,7 @@ jobs:
   deploy-ecs:
     uses: ./.github/workflows/ecs.yml
     needs: deploy-ecr
+    secrets: inherit
     with:
       environment: ${{ github.event.inputs.environment }}
       region: ${{ github.event.inputs.region }}

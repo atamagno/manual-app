@@ -1,0 +1,136 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Application Load Balancer (ALB) stack using existing VPC and subnets"
+
+Parameters:
+  pAppName:
+    Type: String
+    Description: Application Name deployed in this stack
+  pEnvironmentName:
+    Type: String
+    Default: dev
+    Description: The name of the specific stack deployment e.g. 'dev'
+  pVpcId:
+    Type: String
+    Description: VPC ID for security group
+  pPublicSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: List of the public subnets in the VPC
+  pGitHash:
+    Type: String
+  pGitBranch:
+    Type: String
+
+Resources:
+  ELBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group for ELB
+      GroupName: !Sub ${pAppName}-${pEnvironmentName}-elb-sg
+      VpcId: !Ref pVpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Type: application
+      Scheme: internet-facing
+      IpAddressType: ipv4
+      SecurityGroups:
+        - !Ref ELBSecurityGroup
+      Subnets: !Ref pPublicSubnetIds
+      Name: !Sub "${pAppName}-${pEnvironmentName}-elb"
+      Tags:
+        - Key: Name
+          Value: !Sub "${pAppName}-${pEnvironmentName}-elb"
+        - Key: Environment
+          Value: !Ref pEnvironmentName
+
+  ELBTargetGroupA:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub "${pAppName}-${pEnvironmentName}-tg-a"
+      VpcId: !Ref pVpcId
+      TargetType: ip
+      Protocol: HTTP
+      IpAddressType: ipv4
+      ProtocolVersion: HTTP1
+      Port: 80
+      Targets: []
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: /
+      HealthCheckEnabled: true
+      UnhealthyThresholdCount: 2
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 5
+      HealthCheckProtocol: HTTP
+      HealthCheckPort: traffic-port
+      Matcher:
+        HttpCode: "200"
+      Tags:
+        - Key: Name
+          Value: !Sub "${pAppName}-${pEnvironmentName}-tg-a"
+        - Key: Environment
+          Value: !Ref pEnvironmentName
+
+  ELBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      Protocol: HTTP
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      DefaultActions:
+        - Type: forward
+          Order: 1
+          TargetGroupArn: !Ref ELBTargetGroupA
+      Tags:
+        - Key: Name
+          Value: !Sub "${pAppName}-${pEnvironmentName}-elb-listener"
+        - Key: Environment
+          Value: !Ref pEnvironmentName
+
+Outputs:
+  ELBSecurityGroupId:
+    Description: ELB Security Group ID
+    Value: !GetAtt ELBSecurityGroup.GroupId
+    Export:
+      Name: !Sub "${AWS::StackName}-ELBSecurityGroupId"
+
+  LoadBalancerName:
+    Description: Load Balancer Name
+    Value: !GetAtt ApplicationLoadBalancer.LoadBalancerName
+    Export:
+      Name: !Sub "${AWS::StackName}-LoadBalancerName"
+
+  ApplicationLoadBalancerArn:
+    Description: Application Load Balancer ARN
+    Value: !GetAtt ApplicationLoadBalancer.LoadBalancerArn
+    Export:
+      Name: !Sub "${AWS::StackName}-ApplicationLoadBalancerArn"
+
+  ApplicationLoadBalancerDNSName:
+    Description: Application Load Balancer DNS Name
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+    Export:
+      Name: !Sub "${AWS::StackName}-ApplicationLoadBalancerDNSName"
+
+  ELBTargetGroupAArn:
+    Description: ELB Target Group A ARN
+    Value: !Ref ELBTargetGroupA
+    Export:
+      Name: !Sub "${AWS::StackName}-ELBTargetGroupAArn"
+
+  ELBListenerArn:
+    Description: ELB Listener ARN
+    Value: !Ref ELBListener
+    Export:
+      Name: !Sub "${AWS::StackName}-ELBListenerArn"
+
+  CodeRef:
+    Value: !Join ["", [!Ref pGitBranch, ".", !Ref pGitHash]]
+    Description: Code Reference
+    Export:
+      Name: !Sub ${AWS::StackName}-CodeRef
