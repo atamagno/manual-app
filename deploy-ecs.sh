@@ -55,7 +55,7 @@ getStackOutputs () {
       echo "Aborting pipeline"
       exit 255
   else
-    echo "Succesfully retrieved values from ${1}"
+    echo "Successfully retrieved values from ${1}"
     for key in ${stackOutputs}; do
       export ${key}
     done
