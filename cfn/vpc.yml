@@ -42,6 +42,28 @@ Resources:
       InternetGatewayId: !Ref InternetGateway
       VpcId: !Ref VPC
 
+  ElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      PublicIpv4Pool: amazon
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${pAppName}-${pEnvironmentName}-eip"
+        - Key: Environment
+          Value: !Ref pEnvironmentName
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt ElasticIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub "${pAppName}-${pEnvironmentName}-nat-gateway"
+        - Key: Environment
+          Value: !Ref pEnvironmentName
+
   PublicSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
@@ -170,12 +192,38 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
 
+  PrivateSubnet1Route:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+
+  PrivateSubnet2Route:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+
 Outputs:
   VPC:
     Description: A reference to the created VPC
     Value: !Ref VPC
     Export:
       Name: !Sub "${AWS::StackName}-VPC"
+
+  ElasticIPAdress:
+    Description: The Elastic IP address for the NAT Gateway
+    Value: !GetAtt ElasticIP.PublicIp
+    Export:
+      Name: !Sub "${AWS::StackName}-ElasticIPAdress"
+
+  NatGatewayId:
+    Description: A reference to the NAT Gateway
+    Value: !Ref NatGateway
+    Export:
+      Name: !Sub "${AWS::StackName}-NatGatewayId"
 
   PublicSubnets:
     Description: A list of the public subnets
