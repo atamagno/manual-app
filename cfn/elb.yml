@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "VPC with public and private subnets across 2 AZs"
+Description: "Application Load Balancer (ALB) stack using existing VPC and subnets"
 
 Parameters:
   pAppName:
