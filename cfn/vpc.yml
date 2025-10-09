@@ -13,6 +13,10 @@ Parameters:
     Type: String
     Default: "10.0.0.0/16"
     Description: CIDR block for the VPC
+  pGitHash:
+    Type: String
+  pGitBranch:
+    Type: String
 
 Resources:
   VPC:
@@ -260,3 +264,9 @@ Outputs:
     Value: !Ref PrivateSubnet2
     Export:
       Name: !Sub "${AWS::StackName}-PrivateSubnet2"
+
+  CodeRef:
+    Value: !Join ["", [!Ref pGitBranch, ".", !Ref pGitHash]]
+    Description: Code Reference
+    Export:
+      Name: !Sub ${AWS::StackName}-CodeRef

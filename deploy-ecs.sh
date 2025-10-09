@@ -73,10 +73,12 @@ IMAGE_TAG="${IMAGE_TAG:-latest}"
 IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY_NAME:$IMAGE_TAG"
 VPC_CIDR="${VPC_CIDR:-10.0.0.0/16}"
 
-ECS_CFN_TEMPLATE="cfn/ecs.yml"
-ECS_STACK="${PREFIX}ecs-stack"
 VPC_CFN_TEMPLATE="cfn/vpc.yml"
 VPC_STACK="${PREFIX}vpc-stack"
+ECS_CFN_TEMPLATE="cfn/ecs.yml"
+ECS_STACK="${PREFIX}ecs-stack"
+ELB_STACK="${PREFIX}elb-stack"
+ELB_CFN_TEMPLATE="cfn/elb.yml"
 CFN_TAGS="Application=${APP_NAME} Environment=${ENVIRONMENT_NAME}"
 
 echo "Deploying VPC stack $VPC_STACK"
@@ -98,9 +100,32 @@ aws cloudformation deploy \
 getStackOutputs $VPC_STACK
 
 VPC_ID=$Stack_VPC
-SUBNET_IDS=$Stack_PublicSubnets
+PUBLIC_SUBNET_IDS=$Stack_PublicSubnets
+PRIVATE_SUBNET_IDS=$Stack_PrivateSubnets
 
-echo "Using VPC $VPC_ID and subnets $SUBNET_IDS"
+echo "Using VPC $VPC_ID and subnets $PUBLIC_SUBNET_IDS"
+
+echo "Deploying ELB stack $ELB_STACK"
+
+aws cloudformation deploy \
+  --stack-name $ELB_STACK \
+  --template-file $ELB_CFN_TEMPLATE \
+  --parameter-overrides \
+      pAppName=$APP_NAME \
+      pEnvironmentName=$ENVIRONMENT_NAME \
+      pVpcId=$VPC_ID \
+      pPublicSubnetIds=$PUBLIC_SUBNET_IDS \
+      pGitBranch=$GIT_BRANCH \
+      pGitHash=$GIT_HASH \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --no-fail-on-empty-changeset \
+  --tags $CFN_TAGS \
+  --region $AWS_REGION
+
+getStackOutputs $ELB_STACK
+
+ELB_SECURITY_GROUP_ID=$Stack_ELBSecurityGroupId
+ELB_TARGET_GROUP_A_ARN=$Stack_ELBTargetGroupAArn
 
 echo "Deploying ECS stack $ECS_STACK"
 
@@ -112,7 +137,9 @@ aws cloudformation deploy \
       pEnvironmentName=$ENVIRONMENT_NAME \
       pImageUri=$IMAGE_URI \
       pVpcId=$VPC_ID \
-      pSubnetIds=$SUBNET_IDS \
+      pPrivateSubnetIds=$PRIVATE_SUBNET_IDS \
+      pELBSecurityGroupId=$ELB_SECURITY_GROUP_ID \
+      pTargetGroupArn=$ELB_TARGET_GROUP_A_ARN \
       pGitBranch=$GIT_BRANCH \
       pGitHash=$GIT_HASH \
   --capabilities CAPABILITY_NAMED_IAM \

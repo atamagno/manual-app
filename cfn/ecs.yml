@@ -15,9 +15,15 @@ Parameters:
   pVpcId:
     Type: String
     Description: VPC ID for security group
-  pSubnetIds:
+  pPrivateSubnetIds:
     Type: List<AWS::EC2::Subnet::Id>
-    Description: List of the subnets in the VPC
+    Description: List of the private subnets in the VPC
+  pELBSecurityGroupId:
+    Type: String
+    Description: Security Group ID of the Load Balancer
+  pTargetGroupArn:
+    Type: String
+    Description: ARN of the Target Group
   pGitHash:
     Type: String
   pGitBranch:
@@ -102,13 +108,13 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Security Group for ECS Cluster
-      GroupName: !Sub ${pAppName}-${pEnvironmentName}-sg
+      GroupName: !Sub ${pAppName}-${pEnvironmentName}-ecs-cluster-sg
       VpcId: !Ref pVpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
-          CidrIp: 0.0.0.0/0
+          SourceSecurityGroupId: !Ref pELBSecurityGroupId
 
   ECSService:
     Type: AWS::ECS::Service
@@ -119,12 +125,16 @@ Resources:
       DesiredCount: 1
       LaunchType: FARGATE
       TaskDefinition: !Ref TaskDefinition
+      LoadBalancers:
+        - ContainerName: !Sub ${pAppName}-${pEnvironmentName}-container
+          ContainerPort: 80
+          TargetGroupArn: !Sub ${pTargetGroupArn}
       NetworkConfiguration:
         AwsvpcConfiguration:
-          AssignPublicIp: ENABLED
+          AssignPublicIp: DISABLED
           SecurityGroups:
             - !Ref ECSClusterSecurityGroup
-          Subnets: !Ref pSubnetIds
+          Subnets: !Ref pPrivateSubnetIds
 
 Outputs:
   EcsTaskRoleArn:
