@@ -52,7 +52,7 @@ PREFIX="${APP_NAME}-${ENVIRONMENT_NAME}-"
 POSTFIX="-${ACCOUNT_ID}-${AWS_REGION}"
 ECR_REPOSITORY_NAME="${PREFIX}repository${POSTFIX}"
 ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-IMAGE_TAG="${IMAGE_TAG:-latest}"
+IMAGE_TAG="${GIT_HASH:-latest}"
 
 ECR_CFN_TEMPLATE="cfn/ecr.yml"
 ECR_STACK="${PREFIX}ecr-repository-stack"
@@ -76,13 +76,14 @@ echo "Logging in to ECR..."
 aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
 
 echo "Building Docker image..."
-docker build --provenance false -t $ECR_REPOSITORY_NAME:$IMAGE_TAG .
+docker build --provenance false -t $ECR_REPOSITORY_NAME .
 
 echo "Tagging image with $IMAGE_TAG..."
-docker tag $ECR_REPOSITORY_NAME:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY_NAME:$IMAGE_TAG
+docker tag $ECR_REPOSITORY_NAME:latest $ECR_REGISTRY/$ECR_REPOSITORY_NAME:$IMAGE_TAG
+docker tag $ECR_REPOSITORY_NAME:latest $ECR_REGISTRY/$ECR_REPOSITORY_NAME:latest
 
 echo "Pushing image to ECR..."
-docker push $ECR_REGISTRY/$ECR_REPOSITORY_NAME:$IMAGE_TAG
+docker push $ECR_REGISTRY/$ECR_REPOSITORY_NAME --all-tags
 
 echo "Image pushed to ECR successfully!"
 echo "Image: $ECR_REGISTRY/$ECR_REPOSITORY_NAME:$IMAGE_TAG"

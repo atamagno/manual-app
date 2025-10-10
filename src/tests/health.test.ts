@@ -6,11 +6,11 @@ describe("Health endpoint", () => {
   it("should return OK", async () => {
     const fastify = Fastify();
 
-    await fastify.register(healthRoutes, { prefix: "/api/health" });
+    await fastify.register(healthRoutes, { prefix: "/healthcheck" });
 
     const response = await fastify.inject({
       method: "GET",
-      url: "/api/health",
+      url: "/healthcheck",
     });
 
     expect(response.statusCode).toBe(200);

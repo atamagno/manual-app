@@ -1,6 +1,7 @@
 import Fastify from "fastify";
 import dotenv from "dotenv";
 import healthRoutes from "./routes/health";
+import awsRoutes from "./routes/aws";
 import { logger } from "./middleware/logger";
 
 dotenv.config();
@@ -20,7 +21,8 @@ const start = async () => {
 
     // Register routes
     await fastify.register(healthRoutes, { prefix: "/" });
-    await fastify.register(healthRoutes, { prefix: "/api/health" });
+    await fastify.register(healthRoutes, { prefix: "/healthcheck" });
+    await fastify.register(awsRoutes, { prefix: "/" });
 
     await fastify.listen({ port, host: "0.0.0.0" });
     console.log(`Server running at http://localhost:${port}`);

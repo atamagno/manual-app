@@ -5,9 +5,9 @@ services:
     container_name: manual-app
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "80:80"
     volumes:
       - ./src:/usr/src/app/src
     environment:
       - NODE_ENV=development
-      - PORT=3000
+      - PORT=80

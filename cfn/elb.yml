@@ -61,7 +61,7 @@ Resources:
       Port: 80
       Targets: []
       HealthCheckIntervalSeconds: 30
-      HealthCheckPath: /
+      HealthCheckPath: /healthcheck
       HealthCheckEnabled: true
       UnhealthyThresholdCount: 2
       HealthCheckTimeoutSeconds: 5

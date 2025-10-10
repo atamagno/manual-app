@@ -122,7 +122,7 @@ Resources:
     Properties:
       ServiceName: !Sub ${pAppName}-${pEnvironmentName}-EcsService
       Cluster: !Ref ECSCluster
-      DesiredCount: 1
+      DesiredCount: 2
       LaunchType: FARGATE
       TaskDefinition: !Ref TaskDefinition
       LoadBalancers:
